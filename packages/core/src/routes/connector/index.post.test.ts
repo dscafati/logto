@@ -127,6 +127,36 @@ describe('connector data route', () => {
       );
     });
 
+    it('keeps empty objects in connector config (e.g. SMTP `auth` with all-optional fields)', async () => {
+      loadConnectorFactories.mockResolvedValueOnce([
+        {
+          ...mockConnectorFactory,
+          metadata: { ...mockConnectorFactory.metadata, id: 'connectorId' },
+        },
+      ]);
+      countConnectorByConnectorId.mockResolvedValueOnce({ count: 0 });
+      getLogtoConnectors.mockResolvedValueOnce([
+        {
+          dbEntry: { ...mockConnector, connectorId: 'id0' },
+          metadata: { ...mockMetadata, id: 'id0' },
+          type: ConnectorType.Sms,
+          ...mockLogtoConnector,
+        },
+      ]);
+      validateConfig.mockReturnValueOnce(null);
+      buildRawConnector.mockResolvedValueOnce({ rawConnector: { configGuard: any() } });
+      await connectorRequest.post('/connectors').send({
+        connectorId: 'connectorId',
+        config: { host: 'localhost', auth: {} },
+      });
+      expect(insertConnector).toHaveBeenCalledWith(
+        expect.objectContaining({
+          connectorId: 'connectorId',
+          config: { host: 'localhost', auth: {} },
+        })
+      );
+    });
+
     it('throw when create a new connector record with wrong config', async () => {
       loadConnectorFactories.mockResolvedValueOnce([
         {

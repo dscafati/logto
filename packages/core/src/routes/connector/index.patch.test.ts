@@ -179,6 +179,34 @@ describe('connector data routes', () => {
       );
     });
 
+    it('keeps empty objects in connector config (e.g. SMTP `auth` with all-optional fields)', async () => {
+      getLogtoConnectors.mockResolvedValue([
+        {
+          dbEntry: mockConnector,
+          metadata: { ...mockMetadata, isStandard: true },
+          type: ConnectorType.Social,
+          ...mockLogtoConnector,
+        },
+      ]);
+      updateConnector.mockResolvedValueOnce({
+        ...mockConnector,
+        config: { host: 'localhost', auth: {} },
+      });
+      const response = await connectorRequest.patch('/connectors/id').send({
+        config: { host: 'localhost', auth: {} },
+      });
+      expect(response).toHaveProperty('statusCode', 200);
+      expect(updateConnector).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'id' },
+          set: {
+            config: { host: 'localhost', auth: {} },
+          },
+          jsonbMode: 'replace',
+        })
+      );
+    });
+
     it('successfully reset connector config', async () => {
       getLogtoConnectors.mockResolvedValue([
         {

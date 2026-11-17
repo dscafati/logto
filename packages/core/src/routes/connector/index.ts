@@ -186,7 +186,11 @@ export default function connectorRoutes<T extends ManagementApiRouter>(
           {
             id: insertConnectorId,
             connectorId,
-            ...cleanDeep({ syncProfile, config, metadata, enableTokenStorage }),
+            ...cleanDeep({ syncProfile, metadata, enableTokenStorage }),
+            // A connector's config schema can require a key holding an empty object
+            // (e.g. SMTP `auth` with all-optional fields), so empty objects are kept for config.
+            // eslint-disable-next-line no-restricted-syntax
+            ...(config ? { config: cleanDeep(config, { emptyObjects: false }) as JsonObject } : {}),
           },
           connectorIdsOfSameType
         );
@@ -200,7 +204,11 @@ export default function connectorRoutes<T extends ManagementApiRouter>(
         await insertConnector({
           id: insertConnectorId,
           connectorId,
-          ...cleanDeep({ syncProfile, config, metadata, enableTokenStorage }),
+          ...cleanDeep({ syncProfile, metadata, enableTokenStorage }),
+          // A connector's config schema can require a key holding an empty object
+          // (e.g. SMTP `auth` with all-optional fields), so empty objects are kept for config.
+          // eslint-disable-next-line no-restricted-syntax
+          ...(config ? { config: cleanDeep(config, { emptyObjects: false }) as JsonObject } : {}),
         });
 
         captureEvent(
@@ -355,9 +363,11 @@ export default function connectorRoutes<T extends ManagementApiRouter>(
            * `JsonObject` has all non-undefined values, and `cleanDeep` method with default settings
            * drops all keys with undefined values, the return type of `Partial<JsonObject>` is still `JsonObject`.
            * The type inference failed to infer this, manually assign type `JsonObject`.
+           * Empty objects are kept for `config` only: a connector's config schema can require a key
+           * holding an empty object (e.g. SMTP `auth` with all-optional fields).
            */
           // eslint-disable-next-line no-restricted-syntax
-          config: conditional(config && (cleanDeep(config) as JsonObject)),
+          config: conditional(config && (cleanDeep(config, { emptyObjects: false }) as JsonObject)),
           metadata: conditional(metadata && cleanDeep(metadata)),
           syncProfile,
           enableTokenStorage,
